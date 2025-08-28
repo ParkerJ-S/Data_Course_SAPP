@@ -1,1 +1,1 @@
-Testing again, #5.
+Now editing text through the terminal using <vim> Test #6.
