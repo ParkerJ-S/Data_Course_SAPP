@@ -1,0 +1,8 @@
+I would like to look at the goals of wildlife resource departments for managing elk and how those goals are met in areas where their numbers are managed by natural predators like wolves. I also want to compare those results to elk populations being managed by hunting tags.
+
+The data I will be looking for is number of animals in a species (elk) in areas where they have natural predators like wolves to help control their population numbers. Also, data on areas with and without healthy wolf populations and elk target populations in those same areas. Reporting the same figures but with the number of hunting tags issued in place of healthy wolf populations
+
+I will compare three different parameters of current and target elk populations with:
+	1.) Area with healthy wolf population/year
+	2.) Area without healthy wolf population/year
+	3.) Number of hunting tags issued in both areas 1 and 2
