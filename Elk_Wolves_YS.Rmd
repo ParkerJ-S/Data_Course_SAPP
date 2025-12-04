@@ -1,12 +1,11 @@
 ---
-title: "Elk and Wolf Populations in Yellowstone"
+title: "Data Analytics Final"
 author: "Parker Sapp"
 date: "2025-12-03"
 output: 
-  html_document:
-  keep_md: true
-  code_folding: show
-
+  html_document: 
+    keep_md: true
+code_folding: show
 ---
 
 ```{r load libraries, include=FALSE, message=FALSE, warning=FALSE}
@@ -33,6 +32,15 @@ library(htmltools)
 
 ```{r , echo=FALSE}
 div(
+  h1('Elk and Wolf Populations in Yellowstone',
+     style = css(
+       font_family = 'Libre Baskerville',
+       color = 'black',
+       font_size = '40px',
+       line_height = 1.3,
+       margin_top = '0px'
+     )
+     ),
   p('Reintroduction of wolves into Yellowstone National Park and their impact on elk populations',
     style = css(
       font_height = 0.3,
