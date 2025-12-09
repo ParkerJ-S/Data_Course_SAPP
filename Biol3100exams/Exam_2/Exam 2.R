@@ -21,7 +21,8 @@ library(palmerpenguins)
 library(htmltools)
 library(stringr)
 
-unicef_u5mr = read_csv(file = "/Users/sappy/Desktop/School/Data_Analytics/Data_Course_SAPP/Biol3100exams/Exam_2/unicef-u5mr.csv")
+getwd()
+unicef_u5mr = read_csv(file = "Biol3100exams/Exam_2/unicef-u5mr.csv")
 
 view(unicef_u5mr)
 
