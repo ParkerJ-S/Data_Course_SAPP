@@ -1,0 +1,139 @@
+---
+title: "SAPP_Skills_Test_3"
+author: "Parker Sapp"
+date: "2025-12-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(dplyr)
+library(gapminder)
+library(GGally)
+library(ggmap)
+library(ggplot2)
+library(gganimate)
+library(gh)
+library(githubr)
+library(janitor)
+library(jpeg)
+library(readxl)
+library(tidyr)
+library(tidyverse)
+library(skimr)
+library(measurements)
+library(easystats)
+library(MASS)
+library(htmltools)
+library(broom)
+```
+
+```{r}
+raw_data = read_csv("FacultySalaries_1995.csv", show_col_types = FALSE)
+
+cleaned_data = raw_data %>%
+  janitor::clean_names() %>%
+  janitor::remove_empty(which = "rows") %>% # Specify 'rows' only
+  janitor::remove_empty(which = "cols") %>% # Specify 'cols' only
+  dplyr::distinct()
+
+cleaned_data %>% drop_na()
+
+summary(cleaned_data)
+view(cleaned_data)
+colnames(cleaned_data)
+
+long_data = cleaned_data %>%
+  pivot_longer(
+    cols = c(avg_full_prof_salary, avg_assoc_prof_salary, avg_assist_prof_salary),
+    names_to = "Rank",
+    values_to = "Salary"
+  ) %>%
+  mutate(
+    Rank = case_when(
+      Rank == "avg_full_prof_salary" ~ "Full",
+      Rank == "avg_assoc_prof_salary" ~ "Assoc",
+      Rank == "avg_assist_prof_salary" ~ "Assist",
+      TRUE ~ Rank
+    ),
+    Rank = factor(Rank, levels = c("Assist", "Assoc", "Full")),
+    tier = factor(tier, levels = c("I", "IIA", "IIB"))
+  ) %>%
+  drop_na(Salary, tier, Rank, state)
+
+ggplot(long_data, aes(x = Rank, y = Salary, fill = Rank)) +
+  geom_boxplot(outlier.shape = 16, outlier.size = 2, width = 0.5) +
+  facet_grid(. ~ tier, scales = "free_x", space = "free_x") + 
+  scale_y_continuous(breaks = seq(200, 1000, by = 200)) +
+  labs(
+    y = "Salary",
+    fill = "Rank"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+    strip.background = element_rect(color = "black", fill = "white", linewidth = 0.5),
+    axis.title.x = element_text(vjust = -1), 
+    axis.title.y = element_text(vjust = 2)
+  )
+
+anova_model <- aov(Salary ~ state + tier + Rank, data = long_data)
+view(long_data)
+
+summary(anova_model)
+
+chemical_compounds <- c(
+  "alpha-pinene", "para-cymene", "alpha-terpineol", "cedr-9-ene", 
+  "alpha-cedrene", "beta-cedrene", "cis-thujopsene", "alpha-himachalene", 
+  "beta-chamigrene", "cuparene", "compound 1", "alpha-chamigrene", 
+  "widdrol", "cedrol", "beta-acorenol", "alpha-acorenol", 
+  "gamma-eudesmol", "beta-eudesmol", "alpha-eudesmol", "cedr-8-en-13-ol", 
+  "cedr-8-en-15-ol", "compound 2", "thujopsenal"
+)
+
+juniper_raw = read_csv("Juniper_Oils.csv")
+
+juniper_long = juniper_raw %>%
+  janitor::clean_names() %>%
+  tidyr::pivot_longer(
+    cols = dplyr::all_of(chemical_compounds %>% janitor::make_clean_names()),
+    names_to = "ChemicalID",
+    values_to = "Concentration"
+  ) %>%
+  tidyr::drop_na(Concentration)
+
+view(juniper_long)
+
+ggplot(juniper_long, aes(x = years_since_burn, y = Concentration)) +
+geom_smooth(method = "loess", se = TRUE, color = "orange", fill = "grey70") +
+  labs(
+    x = "Years Since Burn",
+    y = "Concentration"
+  ) +
+  facet_wrap(~ ChemicalID, scales = "free_y", ncol = 5) +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 10)
+  )
+
+glm_model = glm(
+  Concentration ~ ChemicalID * years_since_burn, 
+  data = juniper_long, 
+  family = gaussian()
+)
+
+model_output_tidy = tidy(glm_model)
+
+significant_terms = model_output_tidy %>%
+  filter(p.value < 0.05) %>%
+  arrange(p.value)
+
+print(significant_terms)
+
+```
