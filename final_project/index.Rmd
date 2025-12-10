@@ -1,0 +1,42 @@
+---
+title: "Parker Sapp"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(gh)
+library(githubr)
+library(jpeg)
+library(tidyr)
+library(tidyverse)
+library(htmltools)
+```
+
+## Welcome to My Homepage!
+
+```{r , echo=FALSE}
+
+div(
+a(
+    'My Website!',
+    href = './YSproject/index.html',
+    style = css(
+      font_weight = 600,
+      text_decoration = 'none',
+      background = '#086100',
+      color = 'white',
+      margin_bottom = '5px',
+      padding = '8px',
+      display = 'inline-block',
+      border_radius = '8px',
+      box_shadow = '5px 5px 10px rgba(0, 0, 0, 0.6)'
+    )
+  )
+) |>
+  browsable()
+```
+
+![](images/mainphoto.png){width=45%}
