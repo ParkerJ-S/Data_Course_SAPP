@@ -1,24 +1,5 @@
 # **Assignment 6**
 
-In this assignment, you will use R (within R-Studio) to:
-  
-+ Load an untidy data set
-+ Tidy it using tidyr and dplyr verbs
-+ Plot it with ggplot
-
-
-**All file paths should be relative, starting from *your* Assignment_6 directory!!**
-  
-**This means that you need to create a new R-Project named "Assignment_6.Rproj" in your Assignment_6 directory, and work from scripts within that.**
-  
-  ## **For credit...**
-  
-1.  Push a completed version of your Rproj and R-script (details at end of this assignment) to GitHub
-2.  Your score will also depend on whether any files generated in this workflow are found in your repository
-
-
-____________
-First, we can load the *tidyverse* package and import an untidy data set
 library(data.table)
 library(dplyr)
 library(gapminder)
@@ -28,63 +9,100 @@ library(ggplot2)
 library(gganimate)
 library(gh)
 library(githubr)
-library(janitor)
 library(jpeg)
-library(readxl)
 library(tidyr)
 library(tidyverse)
-library(skimr)
-library(measurements)
-library(easystats)
-library(MASS)
-library(knitr)
+library(gifski)
 
 dat = read.csv('../Data_Course_SAPP/Data/BioLog_Plate_Data.csv')
+
 View(dat)
 
-As you might be able to tell from the column names, this data set is all about the ability of various environmental samples to utilize different carbon sources. Each plate has 96 wells and in each well is a fluorescently labeled carbon source. You dilute an environmental sample and add it to each of the wells in a plate and then read light absorbance over time. Higher absorbance values indicate more utilization of that carbon source by the microbes present in the sample. 
-
-Here, we have real data from 4 environmental samples (two soil and two water samples), and their absorbance values at 24, 48, and 144 hours. These plate experiments were repeated at 3 increasing dilutions for each sample source.
-
-# Your task is to Write an R script that:
-
-1.  Cleans this data into tidy (long) form
-
-***Combine the different time periods into one column and separate the absorbance values into their own column***
-  
-View(dat)
 tidy_dat = dat %>% 
   rename('24' = Hr_24, '48' = Hr_48, '144' = Hr_144)
-View(tidy_dat)
 
 tidy_dat = tidy_dat %>% 
   pivot_longer(c(6, 7, 8),
                names_to = "Time",
                values_to = "Absorbance")
+
 View(tidy_dat)
 
-2.  Creates a new column specifying whether a sample is from soil or water
+tidy_dat = dat %>% 
+  rename('24' = Hr_24, '48' = Hr_48, '144' = Hr_144) %>%
+  pivot_longer(
+    cols = c('24', '48', '144'),
+    names_to = "Time",
+    values_to = "Absorbance"
+  ) %>%
+  mutate(Time = as.numeric(Time)) %>%
+  mutate(
+    Source = case_when(
+      Sample.ID == 'Clear_Creek' ~ "Water",
+      Sample.ID == 'Waste_Water' ~ "Water",
+      Sample.ID == 'Soil_1' ~ "Soil",
+      Sample.ID == 'Soil_2' ~ "Soil"
+      )
+    ) %>%
+  drop_na(Time, Absorbance, Sample.ID, Substrate)
 
-unique(tidy_dat$Sample.ID)
-tidy_dat = tidy_dat %>% 
-  mutate(Source = case_when(Sample.ID == 'Clear_Creek' ~ "Water",
-                               Sample.ID == 'Waste_Water' ~ "Water",
-                               Sample.ID == 'Soil_1' ~ "Soil",
-                               Sample.ID == 'Soil_2' ~ "Soil"))
-View(tidy_dat)
+mean_data = tidy_dat %>%
+  filter(Dilution == 0.1) %>%
+  group_by(Source, Time, Substrate) %>%
+  summarize(
+    Mean_Absorbance = mean(Absorbance, na.rm = TRUE),
+    .groups = 'drop'
+  )
 
-3.  Generates a plot that matches this one (note just plotting dilution == 0.1):
+substrate_plot = ggplot(mean_data, aes(x = Time, y = Mean_Absorbance, color = Source)) +
+  geom_smooth(linewidth = 0.5) + 
+  facet_wrap(~ Substrate, ncol = 6) +
+  labs(
+    title = "Absorbance in all Substrates (Average, Dilution 0.1)",
+    y = "Absorbance",
+    x = "Time (Hours)"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("Soil" = "#00798C", "Water" = "#D1495B")) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    axis.line = element_line(colour = "black"),
+    legend.position = "right"
+  )
 
-tidy_dat $Time = as.numeric(as.character(tidy_dat$Time))
+print(substrate_plot)
 
-tidy_dat %>% 
-  ggplot(aes(x = Time, y = Absorbance, color = Source,))+
-  geom_line(aes(group = Source))+
-  facet_wrap(~ Substrate)
+ggsave("Assignments/Assignment_6/substrate_plot.png", 
+  plot = substrate_plot
+)
 
-4.  Generates an animated plot that matches this one (absorbance values are mean of all 3 replicates for each group):
-  This plot is just showing values for the substrate "Itaconic Acid"
+all_samples_data = tidy_dat %>%
+  drop_na(Time, Absorbance)
 
-```{r, echo=FALSE,out.width=600}
-knitr::include_graphics("../../../media/biolog2.gif")
-```
+animation_data = tidy_dat %>%
+  filter(is.finite(Time) & is.finite(Absorbance)) %>% 
+  drop_na(Time, Absorbance, Sample.ID, Substrate)
+
+all_substrates = ggplot(animation_data, aes(x = Time, y = Absorbance, color = Sample.ID)) +
+  geom_line(aes(group = Sample.ID), linewidth = 1) +
+  geom_point(size = 2) +
+  facet_wrap(~ Substrate, ncol = 6) + 
+  labs(
+    title = 'Absorbance Over Time Across All Substrates',
+    y = "Absorbance",
+    x = "Time (Hours)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  transition_reveal(Time)
+
+
+animated_plot = animate(all_substrates, 
+                         duration = 10, 
+                         fps = 15, 
+                         width = 1000,
+                         height = 600,
+                         renderer = gifski_renderer())
+print(animated_plot)
+
+anim_save("Assignments/Assignment_6/my_animation.gif", animation = animated_plot)
