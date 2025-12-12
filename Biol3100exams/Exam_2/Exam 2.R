@@ -22,7 +22,7 @@ library(htmltools)
 library(stringr)
 
 getwd()
-unicef_u5mr = read_csv(file = "Biol3100exams/Exam_2/unicef-u5mr.csv")
+unicef_u5mr = read_csv('unicef-u5mr.csv')
 
 view(unicef_u5mr)
 
