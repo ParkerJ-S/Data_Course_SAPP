@@ -11,3 +11,189 @@ Encoding: UTF-8
 
 RnwWeave: Sweave
 LaTeX: pdfLaTeX
+
+# Load Packages####
+library(data.table)
+library(dplyr)
+library(gapminder)
+library(GGally)
+library(ggmap)
+library(ggplot2)
+library(gganimate)
+library(gh)
+library(githubr)
+library(janitor)
+library(jpeg)
+library(readxl)
+library(tidyr)
+library(tidyverse)
+library(skimr)
+library(measurements)
+library(easystats)
+library(MASS)
+library(palmerpenguins)
+library(htmltools)
+library(stringr)
+
+getwd()
+unicef_u5mr = read_csv('unicef-u5mr.csv')
+
+view(unicef_u5mr)
+
+unicef_u5mr = unicef_u5mr %>%
+  rename_with(
+    .fn = ~str_replace_all(., "U5MR.", "")
+  )
+view(unicef_u5mr)
+
+uniceflong <- unicef_u5mr %>%
+  pivot_longer(
+    cols = -c(CountryName, Continent, Region),
+    names_to = "Year",
+    values_to = "U5MR",
+    values_drop_na = TRUE
+  ) %>%
+  mutate(Year = as.numeric(Year))
+
+view(uniceflong)
+
+ggplot(uniceflong, aes(x = Year, y = U5MR, group = CountryName)) +
+  geom_line(color = "black", linewidth = 0.5) +
+  labs(
+    title = "U5MR Over Time"
+  ) +
+  theme_grey() +
+  theme(
+    axis.title.y = element_text(vjust = 1, angle = 90),
+    axis.title.x = element_text(hjust = 0.5)
+  ) +
+  facet_wrap(~ Continent)
+
+U5MRplot1 = ggplot(uniceflong, aes(x = Year, y = U5MR, group = CountryName)) +
+  geom_line(color = "black", linewidth = 0.5) +
+  labs(
+    title = "U5MR Over Time"
+  ) +
+  theme_grey() +
+  theme(
+    axis.title.y = element_text(vjust = 1, angle = 90),
+    axis.title.x = element_text(hjust = 0.5)
+  ) +
+  facet_wrap(~ Continent)
+
+ggsave("SAPP_Plot_1.png", plot = U5MRplot1)
+
+continentmeans <- uniceflong %>%
+  group_by(Continent, Year) %>%
+  summarize(
+    Mean_U5MR = mean(U5MR, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+ggplot(continentmeans, aes(x = Year, y = Mean_U5MR, color = Continent)) +
+  geom_line(linewidth = 1) +
+  labs(
+    y = "Mean U5MR",
+    x = "Year"
+  ) +
+  scale_y_continuous(limits = c(0, 300), breaks = seq(0, 300, by = 100)) +
+  scale_x_continuous(breaks = seq(1960, 2000, by = 10)) +
+  theme_classic() +
+  theme(
+    panel.grid.major.y = element_line(color = "gray80"),
+    legend.position = "right"
+  )
+
+U5MRplot2 = ggplot(continentmeans, aes(x = Year, y = Mean_U5MR, color = Continent)) +
+  geom_line(linewidth = 1) +
+  labs(
+    y = "Mean U5MR",
+    x = "Year"
+  ) +
+  scale_y_continuous(limits = c(0, 300), breaks = seq(0, 300, by = 100)) +
+  scale_x_continuous(breaks = seq(1960, 2000, by = 10)) +
+  theme_classic() +
+  theme(
+    panel.grid.major.y = element_line(color = "gray80"),
+    legend.position = "right"
+  )
+
+ggsave("SAPP_Plot_2.png", plot = U5MRplot2)
+
+mod1 = lm(U5MR ~ Year, data = uniceflong)
+summary(mod1)
+mod2 = lm(U5MR ~ Year + Continent, data = uniceflong)
+summary(mod2)
+mod3 = lm(U5MR ~ Year + Continent + Year:Continent, data = uniceflong)
+summary(mod3)
+
+model_comparison = anova(mod1, mod2, mod3)
+print(model_comparison)
+
+#I think the third model is going to be the best model because it has the lowest RSS value and a very low p-value.
+
+modelprediction = expand.grid(
+  Year = unique(uniceflong$Year),
+  Continent = unique(uniceflong$Continent)
+) %>%
+  arrange(Continent, Year)
+
+predictions = modelprediction %>%
+  mutate(
+    mod1_pred = predict(mod1, newdata = modelprediction),
+    mod2_pred = predict(mod2, newdata = modelprediction),
+    mod3_pred = predict(mod3, newdata = modelprediction)
+  )
+
+predictions_long = predictions %>%
+  pivot_longer(
+    cols = starts_with("mod"),
+    names_to = "Model",
+    values_to = "Predicted_U5MR"
+  )
+
+ggplot(predictions_long, aes(x = Year, y = Predicted_U5MR, color = Continent)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~ Model) +
+  labs(
+    title = "Model predictions",
+    y = "Predicted U5MR",
+    x = "Year"
+  ) +
+  theme_grey() +
+  scale_y_continuous(limits = c(0, 200), breaks = seq(0, 200, by = 100)) +
+  scale_x_continuous(breaks = seq(1960, 2000, by = 20)) +
+  theme(legend.position = "right")
+
+
+ecuador_2020data = data.frame(
+  Year = 2020,
+  Continent = "Americas"
+)
+
+predict_u5mr = predict(mod3, newdata = ecuador_2020data)
+
+actual_value = 13
+
+predict_diff = abs(predict_u5mr - actual_value)
+
+cat("Predicted U5MR for Ecuador in 2020:", round(predict_u5mr, 2), "\n")
+cat("Actual U5MR for Ecuador in 2020:", actual_value, "\n")
+cat("Model was off by:", round(predict_diff, 2), "deaths per 1000 live births.\n")
+
+mod4 = lm(U5MR ~ Year * CountryName, data = uniceflong)
+summary(mod4)
+
+ecuador2020_mod4 = data.frame(
+  Year = 2020,
+  CountryName = "Ecuador"
+)
+
+predict_mod4 = predict(mod4, newdata = ecuador2020_mod4)
+
+actual_value = 13
+predict_diffmod4 = abs(predict_mod4 - actual_value)
+
+cat("Predicted U5MR for Ecuador in 2020 (Mod 4):", round(predict_mod4, 2), "\n")
+cat("Actual U5MR for Ecuador in 2020:", actual_value, "\n")
+cat("Model 4 was off by:", round(predict_diffmod4, 2), "deaths per 1000 live births.\n")
